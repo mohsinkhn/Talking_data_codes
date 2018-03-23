@@ -4,6 +4,7 @@ from sklearn.metrics import roc_auc_score
 import copy
 from scipy.stats import gmean
 
+#LightGBM compatible cross validator for shuffle validation splits
 def shuffle_crossvalidator(model, X, y, cvlist, X_test=None, predict_test=False, 
                            scorer = roc_auc_score):
     y_trues = []
@@ -39,7 +40,7 @@ def shuffle_crossvalidator(model, X, y, cvlist, X_test=None, predict_test=False,
     
     return y_preds, y_trues, y_test_preds
 
-
+#LightGBM compatible cross validator
 def outoffold_crossvalidator(model, X, y, cvlist, X_test=None, predict_test=False, 
                            scorer = roc_auc_score):
     y_preds = np.zeros(y.shape)
