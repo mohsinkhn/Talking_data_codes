@@ -21,6 +21,12 @@ def testFeatureGeneration(train, test, cols=None, targetcol='is_attributed', fun
     test[cname] = enc.fit(train).transform(test)
     return test
 
+def getTimeFeats(df):
+    df["click_time"] = pd.to_datetime(df["click_time"])
+    df["hourofday"] = df["click_time"].dt.hour
+    df["minuteofhour"] = df["click_time"].dt.minute
+    return df
+
 if __name__ == "__main__":
     dtypes = dtype = {
             'ip'            : 'uint32',
@@ -38,14 +44,13 @@ if __name__ == "__main__":
     train = pd.read_csv("../input/train.csv", skiprows = list(range(1,180000000)))
     
     #Get hour information
-    train["click_time"] = pd.to_datetime(train["click_time"])
-    train["hourofday"] = train["click_time"].dt.hour
-    train["minuteofhour"] = train["click_time"].dt.minute
+    train = getTimeFeats(train)
+    
     CVFOLDS = 20
     for ftype in ['count', 'mean']:
         for col in ['ip', 'app', 'device', 'os', 'channel', 'hour', ['app', 'device'], ['device', 'os'], 
                     ['channel', 'hour'], ['app', 'channel'], ['ip', 'hour'], ['app', 'hour'], ['device', 'channel'],
-                    ['channel', '']]:
+                    ['channel', 'os']]:
             if isinstance(col, list):
                 cols = col
                 col_name = ''
@@ -64,10 +69,24 @@ if __name__ == "__main__":
     #Read train again
     train = pd.read_csv("../input/train.csv", skiprows = list(range(1,180000000)))
     test = pd.read_csv("../input/test.csv", skiprows = list(range(1,17000000)))
+    
+    train = getTimeFeats(train)
+    test = getTimeFeats(test)
+    
     for ftype in ['count', 'mean']:
-        for col in ['ip', 'app', 'device', 'os', 'channel']:
-            col_name = col + "_" + ftype
-            test = testFeatureGeneration(train, test, cols=[col], cname=col_name)    
+        for col in ['ip', 'app', 'device', 'os', 'channel', 'hour', ['app', 'device'], ['device', 'os'], 
+                    ['channel', 'hour'], ['app', 'channel'], ['ip', 'hour'], ['app', 'hour'], ['device', 'channel'],
+                    ['channel', 'os']]:
+            if isinstance(col, list):
+                cols = col
+                col_name = ''
+                col_name = [col_name + '_' + c for c in col ]
+                col_name = col_name + "_" + ftype
+            elif isinstance(col, str):
+                cols = [col]
+                col_name = col + "_" + ftype
+            
+            test = testFeatureGeneration(train, test, cols=cols, cname=col_name) 
             
     test.to_csv("../input/test_featureset1.csv", index=False)
     
