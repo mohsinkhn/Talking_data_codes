@@ -58,7 +58,7 @@ class TargetEncoder(BaseEstimator, TransformerMixin):
             self.dictmap.name = self.cname
             
         print(self.cname)
-        self.dictmap = pd.DataFrame(self.dictmap).reset_index()
+        self.dictmap = self.dictmap.reset_index()
         return self
     
     #@numba.jit
@@ -71,7 +71,7 @@ class TargetEncoder(BaseEstimator, TransformerMixin):
             if self.add_to_orig:
                 return X_transformed
             else:
-                return X_transformed[self.cname]
+                return X_transformed.loc[:, self.cname]
 
         else:
             raise TypeError("Input should be a pandas DataFrame")
