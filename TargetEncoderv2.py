@@ -11,6 +11,23 @@ from sklearn.base import BaseEstimator, TransformerMixin
 
 
 class TargetEncoder(BaseEstimator, TransformerMixin):
+    """
+    A utlity class to help encode categorical variables using different methods.
+    
+    Inputs:
+    cols: (List or str) Can be either a string or list of strings with column names
+    targetcol: (str) Target column to encode column/group of columns with
+    thresh: (int) Minimum count of grouping to encode (Acts as smoothing). Currently not implemented TODO
+    func: (str or callable) Function to be applied on column/ group of columns to encode. 
+          If str is provided, it should be a attribute of pandas Series
+    cname: (str) Column name for new string
+    func_kwargs: (dict) Additional arguments to be passed to function 
+    add_to_orig: (bool) Whether to return dataframe with added feature or just the feature as series
+    
+    Output:
+    pandas DataFrame/Series
+    
+    """
     def __init__(self, cols=None, targetcol=None, cname=None, thresh=0, func=np.mean,  add_to_orig=False,                              func_kwargs={}):
         self.cols = cols #Can be either a string or list of strings with column names
         self.targetcol = targetcol #Target column to encode column/group of columns with
@@ -25,7 +42,7 @@ class TargetEncoder(BaseEstimator, TransformerMixin):
             
         if isinstance(self.func, str):
             if hasattr(pd.Series, self.func):
-                print("here")
+                #print("here")
                 vals = getattr(X.groupby(self.cols)[self.targetcol], self.func)
                 self.dictmap = vals(**self.func_kwargs)
                 
