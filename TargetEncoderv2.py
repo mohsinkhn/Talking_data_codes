@@ -57,7 +57,7 @@ class TargetEncoder(BaseEstimator, TransformerMixin):
             self.cname = cname + "_" + str(self.func)
             self.dictmap.name = self.cname
             
-        print(self.cname)
+        #print(self.cname)
         self.dictmap = self.dictmap
         return self
     
