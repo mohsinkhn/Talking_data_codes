@@ -43,8 +43,8 @@ if __name__ == "__main__":
     #Encoding strategy would be to generate features for train using cross-validation and generate for test using all train data
     
     #First read train and get all train features
-    train = pd.read_csv("../input/train.csv", skiprows = SKIPROWS)
-    #train = pd.read_csv("../input/train.csv") ##TO RUN ON FULL DATA
+    #train = pd.read_csv("../input/train.csv", skiprows = SKIPROWS)
+    train = pd.read_csv("../input/train.csv") ##TO RUN ON FULL DATA
     del train['attributed_time']
     #Get hour information
     train = getTimeFeats(train)
@@ -97,10 +97,10 @@ if __name__ == "__main__":
     del train
     
     #Read train again
-    train = pd.read_csv("../input/train.csv", skiprows = SKIPROWS)
-    #train = pd.read_csv("../input/train.csv")###TO RUN ON FULL DATA
-    test = pd.read_csv("../input/test.csv", skiprows = list(range(1,10000000)))
-    #test = pd.read_csv("../input/test.csv")###TO RUN ON FULL DATA
+    #train = pd.read_csv("../input/train.csv", skiprows = SKIPROWS)
+    train = pd.read_csv("../input/train.csv")###TO RUN ON FULL DATA
+    #test = pd.read_csv("../input/test.csv", skiprows = list(range(1,10000000)))
+    test = pd.read_csv("../input/test.csv")###TO RUN ON FULL DATA
     
     train = getTimeFeats(train)
     test = getTimeFeats(test)
