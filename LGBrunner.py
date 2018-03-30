@@ -60,7 +60,8 @@ if __name__ == "__main__":
     print(X.loc[cvlist1[0][0]].shape, X.loc[cvlist1[0][1]].shape)
     #print(len(cvlist1[0][0]))
     logger.info("check model performance on validation set")
-    shuffle_crossvalidator(model, X, y, cvlist=cvlist1)
+    val_preds, y_val, _ = shuffle_crossvalidator(model, X, y, cvlist=cvlist1)
+    logger.info("Validation score is ", roc_auc_score(val_preds, y_val))
     
     logger.info("fit model on all data and predict on test")
     X_test = test[features]
@@ -70,7 +71,7 @@ if __name__ == "__main__":
     sub = pd.DataFrame()
     sub['click_id'] = test['click_id'].astype('int')
     sub['is_attributed'] = test_preds
-    logger.info(sub['test_preds'].describe())
+    logger.info(sub['is_attributed'].describe())
     
     sub.to_csv("../input/first_submission.csv", index=False)
     
