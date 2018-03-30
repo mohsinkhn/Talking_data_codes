@@ -61,7 +61,7 @@ if __name__ == "__main__":
     #print(len(cvlist1[0][0]))
     logger.info("check model performance on validation set")
     val_preds, y_val, _ = shuffle_crossvalidator(model, X, y, cvlist=cvlist1)
-    logger.info("Validation score is ", roc_auc_score(val_preds, y_val))
+    logger.info("Validation score is ", roc_auc_score(y_val, val_preds))
     
     logger.info("fit model on all data and predict on test")
     X_test = test[features]
