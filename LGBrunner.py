@@ -55,7 +55,7 @@ if __name__ == "__main__":
                                colsample_bytree=0.7, min_child_samples=100, scale_pos_weigt=90,
                            verbose=10)
     
-    features= ['ip','app','device','os','channel','ip_hour_channel_dayvar','ip_hour_day_count','ip_day_channel_hourvar','ip_count','app_count','device_count','os_count','channel_count','hourofday_count','ip_app_count','app_device_count','app_os_count','app_channel_count','app_hourofday_count','device_hourofday_count','os_hourofday_count','channel_hourofday_count','channel_os_count','ip_mean','app_mean','device_mean','os_mean','channel_mean','hourofday_mean','ip_app_mean','app_device_mean','app_os_mean','app_channel_mean','app_hourofday_mean','device_hourofday_mean','os_hourofday_mean','channel_hourofday_mean','channel_os_mean']
+    features= ['app','device','os','channel','ip_hour_day_count','ip_count','app_count','device_count','os_count','channel_count','hourofday_count','app_device_count','app_os_count','app_channel_count','app_hourofday_count','device_hourofday_count','os_hourofday_count','channel_hourofday_count','channel_os_count','app_mean','device_mean','os_mean','channel_mean','app_device_mean','app_os_mean','app_channel_mean','app_hourofday_mean','device_hourofday_mean','os_hourofday_mean','channel_hourofday_mean','channel_os_mean']
     X = train[features]
     y = train.is_attributed
     print(X.loc[cvlist1[0][0]].shape, X.loc[cvlist1[0][1]].shape)
