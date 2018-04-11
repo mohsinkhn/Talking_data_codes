@@ -60,11 +60,11 @@ test = pd.read_csv("../input/test_featureset1_v2.csv", dtype=dtypes, compression
 
 
 print(train.shape, test.shape)
-print(train.head())
-print(train.tail())
+print(train.describe())
+print(train.describe())
 
-print(test.head())
-print(test.tail())
+#print(test.head())
+#print(test.tail())
 
 
 # In[4]:
@@ -85,19 +85,19 @@ print(test.isnull().sum()/len(test))
 
 
 logger.info("Generating train and validation sets")
-val_idx = np.array(train.loc[(train.dayofweek == 3) & (train.hourofday.isin([14]))].index)
-tr_idx  = np.array(train.loc[~((train.dayofweek == 3) & (train.hourofday.isin([14])))].index)
+val_idx = np.array(train.loc[(train.dayofweek == 3) & (train.hourofday.isin([4,5,14]))].index)
+tr_idx  = np.array(train.loc[~((train.dayofweek == 3) & (train.hourofday.isin([4,5,14])))].index)
 cvlist1 = [[tr_idx, val_idx]]
 
-model = lgb.LGBMClassifier(num_leaves=7, max_depth=4, n_jobs=-1, n_estimators=1500, subsample=1.0, 
-                           colsample_bytree=0.7, min_child_samples=100, scale_pos_weigt=100,
+model = lgb.LGBMClassifier(num_leaves=7, max_depth=3, n_jobs=-1, n_estimators=1500, subsample=1.0, 
+                           colsample_bytree=0.7, min_child_samples=1000, scale_pos_weigt=100,
                        verbose=10)
 
 
 # In[8]:
 
 
-features= ['ip', 'app','device','os','channel','ip_hour_day_count','ip_count',
+features= ['ip', 'app','device','os','channel', 'ip_hour_day_count','ip_count',
            'app_count','device_count','os_count','channel_count','hourofday_count',
            'app_device_count','app_os_count','app_channel_count','app_hourofday_count',
            'device_hourofday_count','os_hourofday_count','channel_hourofday_count',
@@ -115,11 +115,16 @@ logger.info("Validation score is {}".format(roc_auc_score(y_val, val_preds)))
 
 
 # In[9]:
+model = lgb.LGBMClassifier(num_leaves=7, max_depth=3, n_jobs=-1, n_estimators=900, subsample=1.0, 
+                           colsample_bytree=0.7, min_child_samples=1000, scale_pos_weigt=100,
+                       verbose=10)
 
 
 logger.info("fit model on all data and predict on test")
 X_test = test[features]
-test_preds = model.fit(train[features], train.is_attributed).predict_proba(X_test)[:,1]
+test_preds = model.fit(train[features], train.is_attributed,
+                      eval_set=[(train[features], train.is_attributed,)],
+                       eval_metric='auc').predict_proba(X_test)[:,1]
 
 
 # In[15]:

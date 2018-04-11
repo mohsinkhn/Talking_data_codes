@@ -18,7 +18,7 @@ def shuffle_crossvalidator(model, X, y, cvlist, X_test=None, predict_test=False,
         X_tr, y_tr = X[tr_index, :], y[tr_index]
         X_val, y_val = X[val_index, :], y[val_index]            
 
-        model.fit(X_tr, y_tr, eval_set=[(X_val, y_val)], eval_metric='auc', verbose=10, early_stopping_rounds=50)
+        model.fit(X_tr, y_tr, eval_set=[(X_tr, y_tr), (X_val, y_val)], eval_metric='auc', verbose=10, early_stopping_rounds=50)
 
         y_pred = model.predict_proba(X_val)[:,1]
         
