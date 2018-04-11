@@ -61,7 +61,7 @@ test = pd.read_csv("../input/test_featureset1_v2.csv", dtype=dtypes, compression
 
 print(train.shape, test.shape)
 print(train.describe())
-print(train.describe())
+print(test.describe())
 
 #print(test.head())
 #print(test.tail())
