@@ -16,7 +16,14 @@ import itertools as IT
 from functools import reduce
 import gc
 import time
+import logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
+# create a file handler
+handler = logging.FileHandler('count_feature_generation.log')
+handler.setLevel(logging.INFO)
 
 
 def cntit(chunk, cols):
@@ -67,14 +74,14 @@ def get_cnt_feature(cols, filename="", dtype=np.uint32,
             result = pool.starmap(cntit, args) #parallely process all chunks
             results.extend(result)
             run_cnt += 1
-            print("Finished iter {}".format(run_cnt))
+            logger.debug("Finished iter {}".format(run_cnt))
             
         for chunk in iter(lambda: list(IT.islice(te_iterator, num_procs)), []):
             args = gen_args(chunk, cols)
             result = pool.starmap(cntit, args) #parallely process all chunks
             results.extend(result)
             run_cnt += 1
-            print("Finished iter {}".format(run_cnt))
+            logger.debug("Finished iter {}".format(run_cnt))
             
     all_cnts = reduce(lambda x, y: x + y, results) #Add all counter objects to get aggregated counter
         
@@ -120,7 +127,7 @@ if __name__ == "__main__":
                        chunksize=CHUNKSIZE
                        )
         total_time = time.time() - start_time
-        print("Count feature generation for {} finished in {}".format(cols, total_time))
+        logger.info("Count feature generation for {} finished in {}".format(cols, total_time))
         gc.collect()
         start_time = time.time()
 
