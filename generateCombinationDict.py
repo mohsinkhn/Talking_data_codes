@@ -1,5 +1,5 @@
 ######################################################################
-# Script to generate count features for different column combinations using booth train and test data
+# Script to generate categorical feature for combinations of "ip, device, os" and "ip, device, os, app"
 # Author: Mohsin Hasan Khan
 ######################################################################
 
@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 # create a file handler
-handler = logging.FileHandler('count_feature_generation.log')
+handler = logging.FileHandler('combination_feature_generation.log')
 handler.setLevel(logging.INFO)
 
 # create a logging format
@@ -31,11 +31,11 @@ handler.setFormatter(formatter)
 
 logger.addHandler(handler)
 
-def cntit(chunk, cols):
+def setit(chunk, cols):
     """
     Given a chunk return a Counter object over tuples of given cols
     """
-    return Counter(list(chunk[cols].itertuples(index=False, name=None)))
+    return list(chunk[cols].itertuples(index=False, name=None))
     
 def gen_args(chunk, cols):
     """
@@ -65,7 +65,7 @@ def get_cnt_feature(cols, filename="", dtype=np.uint32,
         }
 
 
-    results = Counter() # Save all the counter elements here
+    results = set() # Save all the counter elements here
     
     with mp.Pool(num_procs) as pool:
         #Iterators for train and test files
@@ -76,37 +76,37 @@ def get_cnt_feature(cols, filename="", dtype=np.uint32,
         #queue up chunks same as num_procs for parallel processing
         for chunks in iter(lambda: list(IT.islice(tr_iterator, num_procs)), []): 
             args = gen_args(chunks, cols)
-            result = pool.starmap(cntit, args) #parallely process all chunks
-            for r in result:
-                results = results + r
+            result = pool.starmap(setit, args) #parallely process all chunks
+            results.update(*result)
             run_cnt += 1
             logger.info("Finished iter {}".format(run_cnt))
             
         for chunk in iter(lambda: list(IT.islice(te_iterator, num_procs)), []):
             args = gen_args(chunk, cols)
-            result = pool.starmap(cntit, args) #parallely process all chunks
-            for r in result:
-                results = results + r
+            result = pool.starmap(setit, args) #parallely process all chunks
+            results.update(*result)
             run_cnt += 1
             logger.info("Finished iter {}".format(run_cnt))
             
-    all_cnts = results
+    unq_combs = results #Add all counter objects to get aggregated counter
         
-    logger.info(len(all_cnts)) #Check total unique keys in counter
+    logger.info(len(unq_combs)) #Check total unique keys in dictionary
     
+    #Convert set to dict of indices
+    cols_dict = {k:i for i,k in enumerate(unq_combs)}
     #Convert counter object to pandas series for easier integration with pandas dataframe for downstream tasks
-    col_name = '_'.join(cols) + "_cnt"
-    cnt_series = pd.Series(all_cnts, name='col_name', dtype=dtype)
-    cnt_series.index.names = cols
-    if len(cols) == 1:
-        cnt_series.index = cnt_series.index.levels[0]
+    col_name = '_'.join(cols)
+    #cnt_series = pd.Series(cols_dict, name='col_name', dtype=dtype)
+    #cnt_series.index.names = cols
+    #if len(cols) == 1:
+    #    cnt_series.index = cnt_series.index.levels[0]
     
-    logger.info(cnt_series.head())
+    #logger.info(cnt_series.head())
     #If filename not present create one save series as pickled object
     if not(filename):
         filename = os.path.join(out_filepath, col_name + '.pkl')
     with open(filename, "wb") as f:
-        pickle.dump(cnt_series, f)
+        pickle.dump(cols_dict, f)
     
 
 
@@ -120,14 +120,10 @@ if __name__ == "__main__":
 
     start_time = time.time() #Keep a timer for each feature generation
     for cols in [ #Choosing column combinations based on intituition
-               ['ip'], ['ip', 'device', 'os'], ['device', 'os', 'app'],
-               ['app'], ['app', 'channel'], ['ip', 'app'], 
-               ['device', 'os'], ['device', 'os', 'channel'],
+               ['ip', 'device', 'os'],
                ['ip', 'device', 'os', 'app'],
                ['ip', 'device', 'os', 'app', 'channel'],
-            ]:
-        if len(cols) > 3:
-            NUM_PROCS = 2    
+            ]:  
         get_cnt_feature(cols=cols, dtype=np.uint32,
                        train_filepath=TRAIN_FILEPATH,
                        test_filepath=TEST_FILEPATH,

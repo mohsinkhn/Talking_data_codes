@@ -26,24 +26,36 @@ handler.setFormatter(formatter)
 # add the handlers to the logger
 logger.addHandler(handler)
 
-def cross_val_predict_dask(model, X, y, cvlist, method='predict', verbose=1):
-    y_new = pd.DataFrame(index=range(len(y)))
+def eval_fold(train, tr_index, val_index, cols, target_col, colname='new_col', func='mean', func_kwargs = {}):
+    X_tr = train.map_partitions(lambda x: x.iloc[tr_index, :], meta=train)
+    X_val = train.map_partitions(lambda x: x.iloc[val_index, :], meta=train)
+    #display(X_tr.head())
+
+    tmp = getattr(X_tr.groupby(cols)[target_col], func)(**func_kwargs)
+    tmp.name = colname
+    #display(tmp)
+    new_df = X_val.join(tmp.to_frame(), on=cols, how='left')[colname]
+    #display(new_df.head())
+    return new_df
+
+def cross_val_predict_dask(X, cvlist, cols, target_col, colname, func='mean', func_kwargs={}, verbose=1):
+    X_vals = []
     for i, (tr_index, val_index) in enumerate(cvlist):
         if verbose:
             print("Working on fold {}".format(i))
-        X_tr = X.loc[tr_index,:]
-        model.fit(X_tr)
-        vals = getattr(model, method)
-        y_new.loc[val_index] = vals(X_tr)
+        #print(X_tr.shape)
+        new_df = eval_fold(X, tr_index, val_index, cols=cols, target_col=target_col, colname=colname, func=func, func_kwargs=func_kwargs)
+        X_vals.append(new_df)
+    res = dd.concat(X_vals, axis=0)
+    print(res)
+    return res
         
-    return dd.from_pandas(y_new, npartitions=3)
         
-        
-def cvFeatureGeneration(df, cvlist=None, cols=None, targetcol='is_attributed', func='mean', cname=None):
-    #cvlist = StratifiedKFold(folds, random_state=1).split(df, df[targetcol])
-    enc = TargetEncoder(cols=cols, targetcol=targetcol, func=func, cname=cname, add_to_orig=False)
-    df[cname] = cross_val_predict_dask(enc, df, df[targetcol], cvlist, method='transform', verbose=1)
+def cvFeatureGeneration(df, cvlist=None, cols=None, targetcol='is_attributed', func='mean', cname=None, func_kwargs={}):
+    target_df = cross_val_predict_dask(df,  cvlist, cols, targetcol, cname, func, func_kwargs, verbose=1)
+    df = df.join(target_df.to_frame())
     return df
+
 
 def testFeatureGeneration(train, test, cols=None, targetcol='is_attributed', func='mean', cname=None):
     enc = TargetEncoder(cols=cols, targetcol=targetcol, func=func, cname=cname, add_to_orig=False)
@@ -68,18 +80,18 @@ if __name__ == "__main__":
             'click_id'      : 'uint32'
             }
     
-    SKIPROWS = list(range(1,180000000))
+    #SKIPROWS = list(range(1,180000000))
     #Encoding strategy would be to generate features for train using cross-validation and generate for test using all train data
     
     #First read train and get all train features
-    train = pd.read_csv("../input/train.csv", skiprows = SKIPROWS)
-    train = dd.from_pandas(train, npartitions=3)
+    train = dd.read_csv("../input/train_sample.csv")
+    #train = dd.from_pandas(train, npartitions=3)
     logger.info("Reading train")
     #train = dd.read_csv("../input/train.csv") ##TO RUN ON FULL DATA
     #del train['attributed_time']
     #Get hour information
     logger.info("Generating time features for train")
-    train = getTimeFeats(train)
+    #train = getTimeFeats(train)
     
     #ip hour channel day var
     #col_name = "ip_hour_channel_daynunq"
