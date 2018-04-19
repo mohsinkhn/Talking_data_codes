@@ -45,7 +45,8 @@ def process_file(filename,                 #input filename
                  new_filename,             #output filename
                  dict_cols,                #list of grouper columns for each dictionary  
                  group_dicts,              #list of dictionaries
-                 chunksize=10**6):
+                 chunksize=10**6,
+                 test=False):
     #Use known dtypes to reduce memory footprint during loading of dataframe chunks
     dtypes = {
         'ip'            : 'uint32',
@@ -58,9 +59,12 @@ def process_file(filename,                 #input filename
         }
 
     #Features for our new base dataframe
-    base_feats = ['ip', 'app', 'device', 'os', 'channel', 'is_attributed','click_time' ,'dayofweek', 'hourofday',  
+    if test:
+        base_feats = ['ip', 'app', 'device', 'os', 'channel', 'click_time' ,'dayofweek', 'hourofday',  
                   'ip_device_os', 'ip_device_os_app', 'ip_device_os_app_channel']
-
+    else:
+        base_feats = ['ip', 'app', 'device', 'os', 'channel', 'is_attributed','click_time' ,
+                    'dayofweek', 'hourofday', 'ip_device_os', 'ip_device_os_app', 'ip_device_os_app_channel']
     #Create a empty datframe and just write out columns; we will write data in append mode to same file
     df = pd.DataFrame(columns=base_feats)
     df.to_csv(new_filename, index=False)
@@ -83,6 +87,7 @@ def process_file(filename,                 #input filename
             del chunk['tmp']
         
         #Write out chunk in append mode
+        gc.collect()
         chunk[base_feats].to_csv(new_filename, mode='a', header=False, index=False)
     
 if __name__ == "__main__":
@@ -104,8 +109,8 @@ if __name__ == "__main__":
     all_cols = [cols1, cols2, cols3]
     
     #Process all files
-    process_file("../input/train.csv", "../input/train_base.csv", all_cols, all_dicts, chunksize=10**6)
-    process_file("../input/test.csv", "../input/test_base.csv", all_cols, all_dicts, chunksize=10**6)
-    process_file("../input/test_supplement.csv", "../input/test_supplement_base.csv", all_cols, all_dicts, chunksize=10**6)
+    process_file("../input/train.csv", "../input/train_base.csv", all_cols, all_dicts, chunksize=5*10**6)
+    process_file("../input/test.csv", "../input/test_base.csv", all_cols, all_dicts, chunksize=5*10**6, test=True)
+    process_file("../input/test_supplement.csv", "../input/test_supplement_base.csv", all_cols, all_dicts, chunksize=5*10**6, test=True)
 
 
