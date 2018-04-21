@@ -1,10 +1,10 @@
 ######################################################################
-# Script to generate categorical feature for combinations of "ip, device, os" and "ip, device, os, app"
-#MOdififed to remove multiprocessing - giving error for prakhar
+# Script to generate count features for different column combinations using booth train and test data
 # Author: Mohsin Hasan Khan
 ######################################################################
 
 import pandas as pd
+#import ray.dataframe as pd
 import numpy as np
 import pickle
 import os
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 # create a file handler
-handler = logging.FileHandler('combination_feature_generation.log')
+handler = logging.FileHandler('count_feature_generation.log')
 handler.setLevel(logging.INFO)
 
 # create a logging format
@@ -32,12 +32,13 @@ handler.setFormatter(formatter)
 
 logger.addHandler(handler)
 
-def setit(chunk, cols):
+def cntit(chunk, cols):
     """
-    Given a chunk return a list of tuples for given cols
+    Given a chunk return a Counter object over tuples of given cols
     """
-    return list(chunk[cols].itertuples(index=False, name=None))
-    
+    return Counter(list(chunk[cols].itertuples(index=False, name=None)))
+    #return list(zip(*reduce(lambda x,y : (x,y), [chunk[col] for col in cols])))
+
 def gen_args(chunk, cols):
     """
     Helper function for Pool.starmap() to generate a iterable of arguments
@@ -45,14 +46,14 @@ def gen_args(chunk, cols):
     for c in chunk:
         yield (c, cols)
         
-def get_group_dict(cols, filename="", dtype=np.uint32, 
+def get_cnt_feature(cols, filename="", dtype=np.uint32, 
                     train_filepath = "../input/train.csv", 
                     test_filepath = "../input/test_supplement.csv",
                     out_filepath = "../output",
                     num_procs=10, 
                     chunksize=10**6):
     """
-    Gets dictionary with all unique tuple of given columns in both train and test(supplement) as keys and a integer mapping as its value
+    Gets counts over all unique tuple of given columns in both train and test(supplement) data
     """
     #Use known dtypes to reduce memory footprint during loading of dataframe chunks
     dtypes = {
@@ -62,11 +63,16 @@ def get_group_dict(cols, filename="", dtype=np.uint32,
         'os'            : 'uint16',
         'channel'       : 'uint16',
         'is_attributed' : 'uint8',
-        'click_id'      : 'uint32'
+        'click_id'      : 'uint32',
+        'hourofday'     : 'uint8',
+        'dayofweek'     : 'uint8',
+        'ip_device_os'  : 'uint32',
+        'ip_device_os_app': 'uint32',
+        'ip_device_os_app_channel' : 'uint32'
         }
 
 
-    results = set() # Save all the counter elements here
+    results = Counter() # Save all the counter elements here
     
 
         #Iterators for train and test files
@@ -74,47 +80,58 @@ def get_group_dict(cols, filename="", dtype=np.uint32,
     te_iterator = pd.read_csv(test_filepath, dtype=dtypes, usecols=cols, chunksize=chunksize)
     
     run_cnt = 0
+    #queue up chunks same as num_procs for parallel processing
     for chunk in tr_iterator: 
-        result = setit(chunk, cols) 
-        results.update(result)
+        result = cntit(chunk, cols) #parallely process all chunks
+        results = results + result
         run_cnt += 1
         logger.info("Finished iter {}".format(run_cnt))
         
-    for chunk in te_iterator: 
-        result = setit(chunk, cols) 
-        results.update(result)
+    for chunk in te_iterator:
+        result = cntit(chunk, cols) #parallely process all chunks
+        results = results + result
         run_cnt += 1
         logger.info("Finished iter {}".format(run_cnt))
             
-    logger.info(len(results)) #Check total unique keys in dictionary
+    all_cnts = results
+    gc.collect()
+        
+    logger.info(len(all_cnts)) #Check total unique keys in counter
     
-    #Convert set to dict with indices (integer encoding for keys)
-    cols_dict = {k:i for i,k in enumerate(results)}
-    col_name = '_'.join(cols)
+    #Convert counter object to pandas series for easier integration with pandas dataframe for downstream tasks
+    col_name = '_'.join(cols) + "_cnt"
+    cnt_series = pd.Series(all_cnts, name='col_name', dtype=dtype)
+    cnt_series.index.names = cols
+    if len(cols) == 1:
+        cnt_series.index = cnt_series.index.levels[0]
     
-    #If filename not present create one save dictionary as pickled object
+    logger.info(cnt_series.head())
+    #If filename not present create one save series as pickled object
     if not(filename):
         filename = os.path.join(out_filepath, col_name + '.pkl')
     with open(filename, "wb") as f:
-        pickle.dump(cols_dict, f)
+        pickle.dump(cnt_series, f)
     
 
 
 if __name__ == "__main__":
 
-    NUM_PROCS = 5 #Not being used anymore
-    CHUNKSIZE = 10 ** 6 #Make sure NUM_PROCS*CHUNKSIZE fits RAM
-    TRAIN_FILEPATH  = "../input/train.csv"
-    TEST_FILEPATH = "../input/test_supplement.csv"
+    NUM_PROCS = 8
+    CHUNKSIZE = 1 * 10 ** 7 #Make sure NUM_PROCS*CHUNKSIZE fits RAM
+    TRAIN_FILEPATH  = "../input/train_base.csv"
+    TEST_FILEPATH = "../input/test_supplement_base.csv"
     OUT_FILEPATH = "../output"
 
-    start_time = time.time() #Keep a timer for each dictionary generation
-    for cols in [ #Choosing column combinations based on understanding of data so far
-               ['ip', 'device', 'os'],
-               ['ip', 'device', 'os', 'app'],
-               ['ip', 'device', 'os', 'app', 'channel'],
-            ]:  
-        get_group_dict(cols=cols, dtype=np.uint32,
+    start_time = time.time() #Keep a timer for each feature generation
+    for cols in [ #Choosing column combinations based on intituition
+               ['ip'], ['ip', 'app'], ['app'], ['app', 'channel'], ['device', 'os'],
+               ['ip', 'app', 'hourofday'], ['device', 'os', 'app'], ['device', 'os', 'channel'],
+               ['ip_device_os'], ['ip_device_os', 'hourofday'],
+               ['ip_device_os_app'], ['ip_device_os_app_channel'],
+            ]:
+        if len(cols) > 3:
+            NUM_PROCS = 2    
+        get_cnt_feature(cols=cols, dtype=np.uint32,
                        train_filepath=TRAIN_FILEPATH,
                        test_filepath=TEST_FILEPATH,
                        out_filepath=OUT_FILEPATH,
