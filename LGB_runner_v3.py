@@ -73,7 +73,7 @@ if __name__ == "__main__":
     sub = pd.read_csv("../input/sample_submission.csv")
     sub['is_attributed'] = test_preds
     print(sub.head())
-    sub.to_csv("../output/lgb_base9feats.csv")
+    sub.to_csv("../output/lgb_base9feats.csv", index=False)
     
     #del sub
     
@@ -116,6 +116,6 @@ if __name__ == "__main__":
     sub = pd.read_csv("../input/sample_submission.csv")
     sub['is_attributed'] = test_preds
     print(sub.head())
-    sub.to_csv("../output/lgb_base21feats.csv")
+    sub.to_csv("../output/lgb_base21feats.csv", index=False)
     
     
