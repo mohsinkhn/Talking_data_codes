@@ -222,7 +222,7 @@ if __name__ == "__main__":
     
     logger.info("Reading train and test")
     train = pd.read_csv("../input/train_base.csv", dtype=DTYPES, 
-                        #skiprows=range(1, SKIPROWS), nrows=NROWS ###
+                        skiprows=range(1, SKIPROWS), nrows=NROWS ###
                        )
     test = pd.read_csv("../input/test_base.csv", dtype=DTYPES)
     test["is_attributed"] = np.nan
@@ -243,12 +243,12 @@ if __name__ == "__main__":
                 "ip_device_os_app_count": "uint32",
                 "ip_device_os_app_channel_count": "uint32"
                 }
-    train_f2 = pd.read_csv("../output/train_featsset2.csv", usecols=COUNT_COLS, dtype=DTYPES2)
-    test_f2 = pd.read_csv("../output/test_featsset2.csv", usecols=COUNT_COLS, dtype=DTYPES2)
+    #train_f2 = pd.read_csv("../output/train_featsset2.csv", usecols=COUNT_COLS, dtype=DTYPES2)
+    #test_f2 = pd.read_csv("../output/test_featsset2.csv", usecols=COUNT_COLS, dtype=DTYPES2)
     
     logger.info("Merge count features with base dataframe")
-    train = pd.concat([train, train_f2], axis=1)
-    test  = pd.concat([test, test_f2], axis=1)
+    #train = pd.concat([train, train_f2], axis=1)
+    #test  = pd.concat([test, test_f2], axis=1)
     
     logger.info("Break train into tr and val")
     cond = (train.dayofweek == 3) & (train.hourofday.isin([4,5,9,10,13,14]))
@@ -265,27 +265,26 @@ if __name__ == "__main__":
     base_feats = ['ip', 'app', 'device', 'os', 'channel', 'hourofday', 'minutes'] + COUNT_COLS
 
     logger.info("Running model with base feats")
-    model, _ = run_lgb(tr, val, LGB_PARAMS, feats=base_feats, is_develop=True, save_preds=False)
-    test_preds = model.predict_proba(test[base_feats])[:, 1]
-    prepare_submission(test_preds, save_path="basefeats_withcounts1_test_preds.csv")
+    #model, _ = run_lgb(tr, val, LGB_PARAMS, feats=base_feats, is_develop=True, save_preds=False)
+    #test_preds = model.predict_proba(test[base_feats])[:, 1]
+    #prepare_submission(test_preds, save_path="basefeats_withcounts1_test_preds.csv")
     
     logger.info("Generate train and test mean features")
     
-    base_score = roc_auc_score(val["is_attributed"], model.predict_proba(val[base_feats])[:, 1])
     feats2 = []
-    best_score = base_score
     
     for col in ['app', 'channel', 'os', 'device', 'ip', 'ip_device_os']:
         logger.info("Processing feature: {}".format(col))
         
-        logger.info("Gnerating feature: {} for tr/val set".format(count_col))
         col_name = "_".join(col) + "_expmean"
+        logger.info("Gnerating feature: {} for tr/val set".format(col_name))
+        
         get_expanding_mean(tr, val, [col], "is_attributed", 
                            tr_filename=os.path.join(OUT_PATH, "tr_{}.pkl".format(col_name)),  
                            val_filename=os.path.join(OUT_PATH, "val_{}.pkl".format(col_name)), 
                            seed=786, rewrite=False)
         
-        logger.info("Gnerating feature: {} for train/test set".format(count_col))
+        logger.info("Gnerating feature: {} for train/test set".format(col_name))
         get_expanding_mean(train, test, [col], "is_attributed", 
                            tr_filename=os.path.join(OUT_PATH, "train_{}.pkl".format(col_name)),  
                            val_filename=os.path.join(OUT_PATH, "test_{}.pkl".format(col_name)), 
