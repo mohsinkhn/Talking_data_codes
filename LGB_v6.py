@@ -222,7 +222,7 @@ if __name__ == "__main__":
     
     logger.info("Reading train and test")
     train = pd.read_csv("../input/train_base.csv", dtype=DTYPES, 
-                        skiprows=range(1, SKIPROWS), nrows=NROWS ###
+                        #skiprows=range(1, SKIPROWS), nrows=NROWS ###
                        )
     test = pd.read_csv("../input/test_base.csv", dtype=DTYPES)
     test["is_attributed"] = np.nan
