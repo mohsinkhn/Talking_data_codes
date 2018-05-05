@@ -11,19 +11,23 @@ import os
 import gc
 import pickle
 import logging
+
+from TargetEncoder import TargetEncoder
+from utils import *
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 # create a file handler
-handler = logging.FileHandler('LGB_v6.log')
+handler = logging.FileHandler('LGB_v7.log')
 handler.setLevel(logging.INFO)
 
 # create a logging format
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 handler.setFormatter(formatter)
 
-logger.addHandler(handler)   
+logger.addHandler(handler)
 
 if __name__ == "__main__":
     
@@ -68,6 +72,20 @@ if __name__ == "__main__":
     train = time_details(train)
     test = time_details(test)
     
+    logger.info("Load count features")
+    COUNT_COLS = ["app_count", "ip_count", "channel_count",  "os_count", "ip_device_os_count",
+                 "ip_device_os_app_count", "ip_device_os_app_channel_count"]
+    DTYPES2 = {
+               "app_count": "uint32",
+                "ip_count": "uint32",
+                "channel_count": "uint32",
+                "os_count": "uint32",
+                "ip_device_os_count": "uint32",
+                "ip_device_os_app_count": "uint32",
+                "ip_device_os_app_channel_count": "uint32"
+                }
+
+
     logger.info("Break train into tr and val")
     cond = (train.dayofweek == 3) & (train.hourofday.isin([4,5,9,10,13,14]))
     cond2 = ((train.dayofweek == 3) & (train.hourofday < 4)) | (train.dayofweek < 3)
@@ -79,23 +97,23 @@ if __name__ == "__main__":
     logger.info("Shape of train and test is {} and {}".format(train.shape, test.shape))
     logger.info("Shape of tr and val is {} and {}".format(tr.shape, val.shape))
     
-    base_feats = ['ip', 'app', 'device', 'os', 'channel', 'hourofday', 'minutes'] 
+    base_feats = ['ip', 'app', 'device', 'os', 'channel', 'hourofday', 'minutes'] #+ COUNT_COLS + MEAN_COLS
     
     logger.info("Generate train and test mean features")
     feats2 = []
-    for col in ['app', 'channel', 'os', 'device', 'ip', 'ip_device_os']:
-        logger.info("Processing feature: {}".format(col))
+    for cols, target in zip([['ip'], ['ip'], ['app'], ['app'], ['ip'], ['channel'], ['ip_device_os', 'dayofweek'], ['ip', 'os'], ['ip_device_os']],
+                            ['app', 'channel', 'ip', 'os', 'ip_device_os', 'app', 'hourofday', 'app', 'dayofweek']):
         
-        col_name = "_".join([col]) + "_expmean"
+        col_name = "_".join(cols) + "_unq_" + target
         logger.info("Gnerating feature: {} for tr/val set".format(col_name))
         
-        get_expanding_mean(tr, val, [col], "is_attributed", 
+        get_unq_feature(tr, val, cols, target, 
                            tr_filename=os.path.join(OUT_PATH, "tr_{}.pkl".format(col_name)),  
                            val_filename=os.path.join(OUT_PATH, "val_{}.pkl".format(col_name)), 
                            seed=786, rewrite=False)
         
         logger.info("Gnerating feature: {} for train/test set".format(col_name))
-        get_expanding_mean(train, test, [col], "is_attributed", 
+        get_unq_feature(train, test, cols, target, 
                            tr_filename=os.path.join(OUT_PATH, "train_{}.pkl".format(col_name)),  
                            val_filename=os.path.join(OUT_PATH, "test_{}.pkl".format(col_name)), 
                            seed=786, rewrite=False)
@@ -111,11 +129,11 @@ if __name__ == "__main__":
         
     logger.info("Running LGB for train/test set with feats {}".format(feats))
     model, test_preds = run_lgb(train, test, LGB_PARAMS, logger, feats=feats, is_develop=False, save_preds=False)
-    prepare_submission(test_preds, save_path="../output/LGBv6_feats{}_test_preds.csv".format(len(feats)))
+    prepare_submission(test_preds, save_path="../output/LGBv7_feats{}_test_preds.csv".format(len(feats)))
 
     logger.info("Saving train and test features")  
-    train[feats2].to_csv("../output/train_featsset3.csv", index=False)
-    test[feats2].to_csv("../output/test_featsset3.csv", index=False)
+    train[feats2].to_csv("../output/train_featsset4.csv", index=False)
+    test[feats2].to_csv("../output/test_featsset4.csv", index=False)
     
     
 
