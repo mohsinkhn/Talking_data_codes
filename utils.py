@@ -130,3 +130,72 @@ def prepare_submission(preds, save_path = "../output/test_preds.csv"):
     sub["is_attributed"] = preds
     sub.to_csv(save_path, index=False)
 
+
+def load_unq_features(tr, val, train, test, logger, out_path="../output/"):
+    feats2 = []
+    for cols, target in zip([['ip'], ['ip'], ['app'], ['app'], ['ip'], ['channel'], ['ip_device_os', 'dayofweek'], ['ip', 'os'], ['ip_device_os']],
+                            ['app', 'channel', 'ip', 'os', 'ip_device_os', 'app', 'hourofday', 'app', 'dayofweek']):
+        
+        col_name = "_".join(cols) + "_unq_" + target
+        logger.info("Gnerating feature: {} for tr/val set".format(col_name))
+        
+        tr[col_name], val[col_name] = get_unq_feature(tr, val, cols, target, 
+                           tr_filename=os.path.join(out_path, "tr_{}.pkl".format(col_name)),  
+                           val_filename=os.path.join(out_path, "val_{}.pkl".format(col_name)), 
+                           seed=786, rewrite=False)
+        
+        logger.info("Gnerating feature: {} for train/test set".format(col_name))
+        train[col_name], test[col_name] = get_unq_feature(train, test, cols, target, 
+                           tr_filename=os.path.join(out_path, "train_{}.pkl".format(col_name)),  
+                           val_filename=os.path.join(out_path, "test_{}.pkl".format(col_name)), 
+                           seed=786, rewrite=False)
+
+        
+        feats2.append(col_name)
+    return tr, val, train, test, feats2
+
+
+def load_count_features(tr, val, train, test, logger, out_path="../output/", seed=786):
+    feats2 = []
+    for col in ['app', 'channel', 'os', 'device', 'ip', 'ip_device_os', 'ip_device_os_app', 'ip_device_os_app_channel']:
+        logger.info("Processing feature: {}".format(col))
+        
+        col_name = "_".join([col]) + "_count"
+        logger.info("Gnerating feature: {} for tr/val set".format(col_name))
+        
+        tr[col_name], val[col_name] = get_count_feature(tr, val, [col], "is_attributed", 
+                           tr_filename=os.path.join(out_path, "tr_{}_{}.pkl".format(col_name, seed)),  
+                           val_filename=os.path.join(out_path, "val_{}_{}.pkl".format(col_name, seed)), 
+                           seed=786, rewrite=False)
+        
+        logger.info("Gnerating feature: {} for train/test set".format(col_name))
+        train[col_name], test[col_name] = get_count_feature(train, test, [col], "is_attributed", 
+                           tr_filename=os.path.join(out_path, "train_{}_{}.pkl".format(col_name, seed)),  
+                           val_filename=os.path.join(out_path, "test_{}_{}.pkl".format(col_name, seed)), 
+                           seed=786, rewrite=False)
+        feats2.append(col_name)
+    return tr, val, train, test, feats2
+
+
+def load_expmean_features(tr, val, train, test, logger, out_path="../output/"):
+    feats2 = []
+    for col in ['app', 'channel', 'os', 'device', 'ip', 'ip_device_os']:
+        logger.info("Processing feature: {}".format(col))
+        
+        col_name = "_".join([col]) + "_expmean"
+        logger.info("Gnerating feature: {} for tr/val set".format(col_name))
+        
+        tr[col_name], val[col_name] = get_expanding_mean(tr, val, [col], "is_attributed", 
+                           tr_filename=os.path.join(out_path, "tr_{}.pkl".format(col_name)),  
+                           val_filename=os.path.join(out_path, "val_{}.pkl".format(col_name)), 
+                           seed=786, rewrite=False)
+        
+        logger.info("Gnerating feature: {} for train/test set".format(col_name))
+        train[col_name], test[col_name] = get_expanding_mean(train, test, [col], "is_attributed", 
+                           tr_filename=os.path.join(out_path, "train_{}.pkl".format(col_name)),  
+                           val_filename=os.path.join(out_path, "test_{}.pkl".format(col_name)), 
+                           seed=786, rewrite=False)
+
+        
+        feats2.append(col_name)
+    return tr, val, train, test, feats2
