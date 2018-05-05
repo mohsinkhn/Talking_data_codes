@@ -39,6 +39,32 @@ def load_if_saved(feature_generator):
 
 
 @load_if_saved
+def get_count_feature(tr, val, cols, target, tr_filename="../output/tr_tmp.pkl",  
+                     val_filename="../output/val_tmp.pkl", seed=786, rewrite=False):
+    all_cols = cols + [target]
+    
+    mean_enc = TargetEncoder(cols=cols,  targetcol=target, func='count')
+    mean_enc.fit(pd.concat([tr[all_cols], val[all_cols]]))
+    tr_data = mean_enc.transform(tr[all_cols])
+    val_data = mean_enc.transform(val[all_cols])
+    
+    return tr_data, val_data
+
+
+@load_if_saved
+def get_mean_feature(tr, val, cols, target, tr_filename="../output/tr_tmp.pkl",  
+                     val_filename="../output/val_tmp.pkl", cv=5, thresh=2, seed=786, rewrite=False):
+    all_cols = cols + [target]
+    
+    mean_enc = TargetEncoder(cols=cols,  targetcol=target, func='mean')
+    cvlist = KFold(n_splits=cv, shuffle=True, random_state=seed).split(tr[target])
+    
+    tr_data = cross_val_predict(mean_enc, tr[all_cols], tr[target], cv=cvlist, method='transform', verbose=1)
+    val_data = mean_enc.fit(tr[all_cols]).transform(val[all_cols])
+    
+    return tr_data, val_data
+
+@load_if_saved
 def get_unq_feature(tr, val, cols, target, tr_filename="../output/tr_tmp.pkl",  
                      val_filename="../output/val_tmp.pkl", seed=786, rewrite=False):
     col_name = "_".join(cols) + '_unq_' + target
