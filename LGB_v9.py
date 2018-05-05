@@ -86,6 +86,7 @@ if __name__ == "__main__":
     train = pd.concat([train, trainf2[feats_extra]], axis=1)
     test = pd.concat([test, testf2[feats_extra]], axis=1)   
 
+    del trainf2, testf2
     logger.info("Break train into tr and val")
     cond = (train.dayofweek == 3) & (train.hourofday.isin([4,5,9,10,13,14]))
     cond2 = ((train.dayofweek == 3) & (train.hourofday < 4)) | (train.dayofweek < 3)
