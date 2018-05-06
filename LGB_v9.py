@@ -46,13 +46,37 @@ if __name__ == "__main__":
             'ip_device_os_app_channel' : 'uint32',
 
             }
-    LGB_PARAMS = {
+    LGB_PARAMS1 = {
                  "n_estimators" : 1500, ###
                  "max_depth"    : 3,
                  "subsample"    : 0.7,
                  "colsample_bytree": 0.7,
-                 "min_child_samples": 200,
-                 "reg_lambda"       : 0.1,
+                 "min_child_samples": 100,
+                 "reg_lambda"       : 10,
+                 "scale_pos_weight" : 200, 
+                 "num_leaves"       : 7,
+                 "n_jobs"           :-1
+                  }
+
+    LGB_PARAMS2 = {
+                 "n_estimators" : 2000, ###
+                 "max_depth"    : 3,
+                 "subsample"    : 0.7,
+                 "colsample_bytree": 0.7,
+                 "min_child_samples": 2000,
+                 "reg_lambda"       : 0,
+                 "scale_pos_weight" : 200, 
+                 "num_leaves"       : 7,
+                 "n_jobs"           :-1
+                  }
+
+    LGB_PARAMS3 = {
+                 "n_estimators" : 2000, ###
+                 "max_depth"    : 3,
+                 "subsample"    : 0.7,
+                 "colsample_bytree": 0.9,
+                 "min_child_samples": 500,
+                 "reg_lambda"       : 0,
                  "scale_pos_weight" : 200, 
                  "num_leaves"       : 7,
                  "n_jobs"           :-1
@@ -82,6 +106,10 @@ if __name__ == "__main__":
        'ip_device_os_app_channel_timecount',
        'ip_device_os_app_channel_timediff']
 
+    for f in feats_extra:
+        trainf2[f] = trainf2[f].astype(np.int32)
+        testf2[f] = testf2[f].astype(np.int32)
+
     logger.info("Read extra features")
     train = pd.concat([train, trainf2[feats_extra]], axis=1)
     test = pd.concat([test, testf2[feats_extra]], axis=1)   
@@ -103,16 +131,18 @@ if __name__ == "__main__":
     logger.info("Generate count features")
     
     tr, val, train, test, feats_count = load_count_features(tr, val, train, test, logger)
-    tr, val, train, test, feats_expmean = load_expmean_features(tr, val, train, test, logger)
+    #tr, val, train, test, feats_expmean = load_expmean_features(tr, val, train, test, logger)
     tr, val, train, test, feats_unq = load_unq_features(tr, val, train, test, logger)
     
-    feats = base_feats + feats_count + feats_expmean + feats_unq
-        
-    logger.info("Running LGB for develop set with feats {}".format(feats))
-    model, val_preds = run_lgb(tr, val, LGB_PARAMS, logger, feats=feats, is_develop=True, save_preds=False)
-    score = roc_auc_score(y_val, val_preds)
-        
-    #logger.info("Running LGB for train/test set with feats {}".format(feats))
-    #model, test_preds = run_lgb(train, test, LGB_PARAMS, logger, feats=feats, is_develop=False, save_preds=False)
-    test_preds = model.predict_proba(test[feats])[:,1]
-    prepare_submission(test_preds, save_path="../output/LGBv8_feats{}_test_preds.csv".format(len(feats)))
+    feats = base_feats + feats_count + feats_unq + feats_extra #+ feats_expmean 
+    
+    for i, PARAMS in enumerate([LGB_PARAMS1, LGB_PARAMS2, LGB_PARAMS3]):
+        logger.info("Running LGB for develop set with feats {}".format(feats))
+        model, val_preds = run_lgb(tr, val, PARAMS, logger, feats=feats, is_develop=True, save_preds=False)
+        #score = roc_auc_score(y_val, val_preds)
+            
+        #logger.info("Running LGB for train/test set with feats {}".format(feats))
+        #model, test_preds = run_lgb(train, test, LGB_PARAMS, logger, feats=feats, is_develop=False, save_preds=False)
+        test_preds = model.predict_proba(test[feats])[:,1]
+        prepare_submission(test_preds, save_path="../output/LGBv8_feats{}_test_preds_iter{}.csv".format(len(feats), i))
+        gc.collect()

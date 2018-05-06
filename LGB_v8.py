@@ -79,7 +79,7 @@ if __name__ == "__main__":
     logger.info("Shape of train and test is {} and {}".format(train.shape, test.shape))
     logger.info("Shape of tr and val is {} and {}".format(tr.shape, val.shape))
     
-    base_feats = ['ip', 'app', 'device', 'os', 'channel', 'hourofday', 'minutes'] #+ COUNT_COLS + MEAN_COLS
+    base_feats = ['ip', 'app', 'device', 'os', 'channel', 'hourofday', 'ip_device_os'] #+ COUNT_COLS + MEAN_COLS
     
     logger.info("Generate count features")
     
@@ -87,11 +87,11 @@ if __name__ == "__main__":
     tr, val, train, test, feats_expmean = load_expmean_features(tr, val, train, test, logger)
     tr, val, train, test, feats_unq = load_unq_features(tr, val, train, test, logger)
     
-    feats = base_feats + feats_count + feats_expmean + feats_unq
+    feats = base_feats + feats_count + feats_unq #++ feats_expmean
     #feats.remove(['ip_expmean'])
     logger.info("Running LGB for develop set with feats {}".format(feats))
     model, val_preds = run_lgb(tr, val, LGB_PARAMS, logger, feats=feats, is_develop=True, save_preds=False)
-    score = roc_auc_score(y_val, val_preds)
+    #score = roc_auc_score(y_val, val_preds)
         
     #logger.info("Running LGB for train/test set with feats {}".format(feats))
     #model, test_preds = run_lgb(train, test, LGB_PARAMS, logger, feats=feats, is_develop=False, save_preds=False)

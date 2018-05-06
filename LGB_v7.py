@@ -72,20 +72,6 @@ if __name__ == "__main__":
     train = time_details(train)
     test = time_details(test)
     
-    logger.info("Load count features")
-    COUNT_COLS = ["app_count", "ip_count", "channel_count",  "os_count", "ip_device_os_count",
-                 "ip_device_os_app_count", "ip_device_os_app_channel_count"]
-    DTYPES2 = {
-               "app_count": "uint32",
-                "ip_count": "uint32",
-                "channel_count": "uint32",
-                "os_count": "uint32",
-                "ip_device_os_count": "uint32",
-                "ip_device_os_app_count": "uint32",
-                "ip_device_os_app_channel_count": "uint32"
-                }
-
-
     logger.info("Break train into tr and val")
     cond = (train.dayofweek == 3) & (train.hourofday.isin([4,5,9,10,13,14]))
     cond2 = ((train.dayofweek == 3) & (train.hourofday < 4)) | (train.dayofweek < 3)
@@ -107,16 +93,16 @@ if __name__ == "__main__":
         col_name = "_".join(cols) + "_unq_" + target
         logger.info("Gnerating feature: {} for tr/val set".format(col_name))
         
-        get_unq_feature(tr, val, cols, target, 
+        tr[col_name], val[col_name] = get_unq_feature(tr, val, cols, target, 
                            tr_filename=os.path.join(OUT_PATH, "tr_{}.pkl".format(col_name)),  
                            val_filename=os.path.join(OUT_PATH, "val_{}.pkl".format(col_name)), 
-                           seed=786, rewrite=False)
+                           seed=786, rewrite=True)
         
         logger.info("Gnerating feature: {} for train/test set".format(col_name))
-        get_unq_feature(train, test, cols, target, 
+        train[col_name], test[col_name] = get_unq_feature(train, test, cols, target, 
                            tr_filename=os.path.join(OUT_PATH, "train_{}.pkl".format(col_name)),  
                            val_filename=os.path.join(OUT_PATH, "test_{}.pkl".format(col_name)), 
-                           seed=786, rewrite=False)
+                           seed=786, rewrite=True)
 
         
         feats2.append(col_name)
@@ -127,13 +113,13 @@ if __name__ == "__main__":
     model, val_preds = run_lgb(tr, val, LGB_PARAMS, logger, feats=feats, is_develop=True, save_preds=False)
     score = roc_auc_score(y_val, val_preds)
         
-    logger.info("Running LGB for train/test set with feats {}".format(feats))
-    model, test_preds = run_lgb(train, test, LGB_PARAMS, logger, feats=feats, is_develop=False, save_preds=False)
-    prepare_submission(test_preds, save_path="../output/LGBv7_feats{}_test_preds.csv".format(len(feats)))
+    #logger.info("Running LGB for train/test set with feats {}".format(feats))
+    #model, test_preds = run_lgb(train, test, LGB_PARAMS, logger, feats=feats, is_develop=False, save_preds=False)
+    #prepare_submission(test_preds, save_path="../output/LGBv7_feats{}_test_preds.csv".format(len(feats)))
 
-    logger.info("Saving train and test features")  
-    train[feats2].to_csv("../output/train_featsset4.csv", index=False)
-    test[feats2].to_csv("../output/test_featsset4.csv", index=False)
+    #logger.info("Saving train and test features")  
+    #train[feats2].to_csv("../output/train_featsset4.csv", index=False)
+    #test[feats2].to_csv("../output/test_featsset4.csv", index=False)
     
     
 
