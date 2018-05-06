@@ -127,6 +127,43 @@ def get_expanding_count(tr, val, cols, target, tr_filename="../output/tr_tmp.pkl
     
     return tr[col_name].values.astype(np.float32), val[col_name].values.astype(np.float32)
 
+
+@load_if_saved_numpy
+def get_std_feature(tr, val, cols, target, tr_filename="../output/tr_tmp.npy",  
+                     val_filename="../output/val_tmp.npy", seed=786, rewrite=False):
+    all_cols = cols + [target]
+    
+    var_enc = TargetEncoder(cols=cols,  targetcol=target, func='std')
+    var_enc.fit(pd.concat([tr[all_cols], val[all_cols]]))
+    tr_data = var_enc.transform(tr[all_cols])
+    val_data = var_enc.transform(val[all_cols])
+    
+    return tr_data, val_data
+
+
+@load_if_saved_numpy
+def get_next_click(tr, val, cols, shift=-1, target='epoch_time', tr_filename="../output/tr_tmp.npy",  
+                     val_filename="../output/val_tmp.npy", seed=786, rewrite=False):
+    tr = tr.copy()
+    val = val.copy()
+    all_cols = cols + [target]
+    tr['next_click'] = tr[all_cols].groupby(cols)[target].shift(shift) - tr['epoch_time']
+    val['next_click'] = val[all_cols].groupby(cols)[target].shift(shift) - val['epoch_time']
+    
+    return tr['next_click'].fillna(-1).values, val['next_click'].fillna(-1).values
+
+
+@load_if_saved_numpy
+def get_prev_click(tr, val, cols, shift=1, target='epoch_time', tr_filename="../output/tr_tmp.npy",  
+                     val_filename="../output/val_tmp.npy", seed=786, rewrite=False):
+    all_cols = cols + [target]
+    tr = tr.copy()
+    val = val.copy()
+    tr['prev_click'] = tr['epoch_time'] - tr[all_cols].groupby(cols)[target].shift(shift) 
+    val['prev_click'] = val['epoch_time'] - val[all_cols].groupby(cols)[target].shift(shift) 
+    
+    return tr['prev_click'].fillna(-1).values, val['prev_click'].fillna(-1).values
+
 def run_lgb(tr, val, params, logger, 
            feats=None, is_develop=True, 
            save_preds = False,
