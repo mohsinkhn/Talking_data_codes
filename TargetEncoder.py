@@ -30,11 +30,11 @@ class TargetEncoder(BaseEstimator, TransformerMixin):
     
     #@numba.jit        
     def fit(self, X, y=None):
-            
+        all_cols = self.cols + [self.targetcol]
         if isinstance(self.func, str):
             if hasattr(pd.Series, self.func):
                 #print("here")
-                vals = getattr(X.groupby(self.cols)[self.targetcol], self.func)
+                vals = getattr(X[all_cols].groupby(self.cols)[self.targetcol], self.func)
                 self.dictmap = vals(**self.func_kwargs)
                 
         else:
