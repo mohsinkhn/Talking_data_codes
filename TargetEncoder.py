@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 from sklearn.base import BaseEstimator, TransformerMixin
 class TargetEncoder(BaseEstimator, TransformerMixin):
     """
@@ -18,7 +19,7 @@ class TargetEncoder(BaseEstimator, TransformerMixin):
     pandas DataFrame/Series
     
     """
-    def __init__(self, cols=None, targetcol=None, cname=None, thresh=0, func=np.mean,  add_to_orig=False,                              func_kwargs={}):
+    def __init__(self, cols=None, targetcol=None, cname=None, thresh=0, func=np.mean,  add_to_orig=False, func_kwargs={}):                                                 
         self.cols = cols #Can be either a string or list of strings with column names
         self.targetcol = targetcol #Target column to encode column/group of columns with
         self.thresh = thresh  #Minimum count of grouping to encode (Acts as smoothing)
