@@ -251,7 +251,7 @@ def load_count_features(tr, val, train, test, logger, out_path="../output/", see
 
 def load_expmean_features(tr, val, train, test, logger, out_path="../output/", rewrite=False):
     feats2 = []
-    for col in ['app', 'channel', 'os', 'device', 'ip', 'ip_device_os']:
+    for col in ['app', 'channel', 'ip']:
         logger.info("Processing feature: {}".format(col))
         
         col_name = "_".join([col]) + "_expmean"
@@ -261,17 +261,18 @@ def load_expmean_features(tr, val, train, test, logger, out_path="../output/", r
                            tr_filename=os.path.join(out_path, "tr_{}.npy".format(col_name)),  
                            val_filename=os.path.join(out_path, "val_{}.npy".format(col_name)), 
                            seed=786, rewrite=rewrite)
-        tr[col_name], val[col_name] = tr[col_name].fillna(0), val[col_name].fillna(0)
+        tr[col_name], val[col_name] = tr[col_name].astype(np.float32), val[col_name].astype(np.float32)
 
         logger.info("Gnerating feature: {} for train/test set".format(col_name))
         train[col_name], test[col_name] = get_expanding_mean(train, test, [col], "is_attributed", 
                            tr_filename=os.path.join(out_path, "train_{}.npy".format(col_name)),  
                            val_filename=os.path.join(out_path, "test_{}.npy".format(col_name)), 
                            seed=786, rewrite=rewrite)
-        train[col_name], test[col_name] = train[col_name].fillna(0), test[col_name].fillna(0)
+        train[col_name], test[col_name] = train[col_name].astype(np.float32), test[col_name].astype(np.float32)
         
         feats2.append(col_name)
     return tr, val, train, test, feats2
+
 
 def load_timediff_features(tr, val, train, test, logger, out_path="../output/", rewrite=False):
     feats2 = []
@@ -279,7 +280,7 @@ def load_timediff_features(tr, val, train, test, logger, out_path="../output/", 
         logger.info("Processing feature: {}".format(col))
         
         for SHIFT in [1,2]:
-            col_name = "_".join([col]) + "_prev_click_" + SHIFT
+            col_name = "_".join([col]) + "_prev_click_" + str(SHIFT)
             logger.info("Gnerating feature: {} for tr/val set".format(col_name))
             
             tr[col_name], val[col_name] = get_prev_click(tr, val, [col], shift=SHIFT, target= "is_attributed", 
@@ -297,7 +298,7 @@ def load_timediff_features(tr, val, train, test, logger, out_path="../output/", 
             
             feats2.append(col_name)
 
-            col_name = "_".join([col]) + "_next_click_" + SHIFT
+            col_name = "_".join([col]) + "_next_click_" + str(SHIFT)
             logger.info("Gnerating feature: {} for tr/val set".format(col_name))
             
             tr[col_name], val[col_name] = get_prev_click(tr, val, [col], shift=-SHIFT, target= "is_attributed", 
@@ -314,4 +315,28 @@ def load_timediff_features(tr, val, train, test, logger, out_path="../output/", 
             train[col_name], test[col_name] = train[col_name].astype(np.float32), test[col_name].astype(np.float32)
             
             feats2.append(col_name)         
+    return tr, val, train, test, feats2
+
+def load_expcount_features(tr, val, train, test, logger, out_path="../output/", rewrite=False):
+    feats2 = []
+    for col in ['app', 'channel', 'ip']:
+        logger.info("Processing feature: {}".format(col))
+        
+        col_name = "_".join([col]) + "_expcount"
+        logger.info("Gnerating feature: {} for tr/val set".format(col_name))
+        
+        tr[col_name], val[col_name] = get_expanding_count(tr, val, [col], "is_attributed", 
+                           tr_filename=os.path.join(out_path, "tr_{}.npy".format(col_name)),  
+                           val_filename=os.path.join(out_path, "val_{}.npy".format(col_name)), 
+                           seed=786, rewrite=rewrite)
+        tr[col_name], val[col_name] = tr[col_name].fillna(0), val[col_name].fillna(0)
+
+        logger.info("Gnerating feature: {} for train/test set".format(col_name))
+        train[col_name], test[col_name] = get_expanding_count(train, test, [col], "is_attributed", 
+                           tr_filename=os.path.join(out_path, "train_{}.npy".format(col_name)),  
+                           val_filename=os.path.join(out_path, "test_{}.npy".format(col_name)), 
+                           seed=786, rewrite=rewrite)
+        train[col_name], test[col_name] = train[col_name].fillna(0), test[col_name].fillna(0)
+        
+        feats2.append(col_name)
     return tr, val, train, test, feats2
