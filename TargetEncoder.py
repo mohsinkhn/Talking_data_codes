@@ -65,5 +65,4 @@ class TargetEncoder(BaseEstimator, TransformerMixin):
                 return X_transformed.values
 
         else:
->>>>>>> 92aa9baac489108b178f6f6460e9f47501e50b8b
             raise TypeError("Input should be a pandas DataFrame")
