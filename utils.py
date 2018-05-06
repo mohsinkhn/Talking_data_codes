@@ -98,7 +98,7 @@ def get_unq_feature(tr, val, cols, target, tr_filename="../output/tr_tmp.pkl",
     return tr[col_name].values.astype(np.int32), val[col_name].values.astype(np.int32)
 
 
-@load_if_saved
+@load_if_saved_numpy
 def get_expanding_mean(tr, val, cols, target, tr_filename="../output/tr_tmp.pkl",  
                      val_filename="../output/val_tmp.pkl", seed=786, rewrite=False):
     col_name = "_".join(cols) + '_expmean'
@@ -118,14 +118,14 @@ def get_expanding_count(tr, val, cols, target, tr_filename="../output/tr_tmp.pkl
                      val_filename="../output/val_tmp.pkl", seed=786, rewrite=False):
     col_name = "_".join(cols) + '_expcount'
     all_cols  = cols + [target]
-    tr[col_name] = tr[all_cols].groupby(cols)[target].expanding(min_periods=1).count().shift().fillna(-1).reset_index(level=0, drop=True)
+    tr[col_name] = tr[all_cols].groupby(cols)[target].expanding(min_periods=1).count().shift().fillna(0).reset_index(level=0, drop=True)
     
     exp_mean = TargetEncoder(cols=cols,  targetcol=target, func='count') 
     exp_mean.fit(tr[all_cols])
     val[col_name] = exp_mean.transform(val[all_cols])
-    val[col_name] = val[col_name].fillna(-1)
+    val[col_name] = val[col_name].fillna(0)
     
-    return tr[col_name].values.astype(np.float32), val[col_name].values.astype(np.float32)
+    return tr[col_name].values, val[col_name].values
 
 
 @load_if_saved_numpy
@@ -202,9 +202,9 @@ def prepare_submission(preds, save_path = "../output/test_preds.csv"):
 
 def load_unq_features(tr, val, train, test, logger, out_path="../output/", rewrite=False):
     feats2 = []
-    for cols, target in zip([['ip'], ['ip'], ['app'], ['app'], ['ip'], ['channel'], ['ip_device_os', 'dayofweek'], ['ip', 'os'], ['ip_device_os']],
-                            ['app', 'channel', 'ip', 'os', 'ip_device_os', 'app', 'hourofday', 'app', 'dayofweek']):
-        
+    #for cols, target in zip([['ip'], ['ip'], ['app'], ['app'], ['ip'], ['channel'], ['ip_device_os', 'dayofweek'], ['ip', 'os'], ['ip_device_os']],
+    #                        ['app', 'channel', 'ip', 'os', 'ip_device_os', 'app', 'hourofday', 'app', 'dayofweek']):
+    for cols, target in zip([['ip'], ['app']], ['app', 'channel']):    
         col_name = "_".join(cols) + "_unq_" + target
         logger.info("Gnerating feature: {} for tr/val set".format(col_name))
         
@@ -258,17 +258,60 @@ def load_expmean_features(tr, val, train, test, logger, out_path="../output/", r
         logger.info("Gnerating feature: {} for tr/val set".format(col_name))
         
         tr[col_name], val[col_name] = get_expanding_mean(tr, val, [col], "is_attributed", 
-                           tr_filename=os.path.join(out_path, "tr_{}.pkl".format(col_name)),  
-                           val_filename=os.path.join(out_path, "val_{}.pkl".format(col_name)), 
+                           tr_filename=os.path.join(out_path, "tr_{}.npy".format(col_name)),  
+                           val_filename=os.path.join(out_path, "val_{}.npy".format(col_name)), 
                            seed=786, rewrite=rewrite)
-        tr[col_name], val[col_name] = tr[col_name].astype(np.float32), val[col_name].astype(np.float32)
+        tr[col_name], val[col_name] = tr[col_name].fillna(0), val[col_name].fillna(0)
 
         logger.info("Gnerating feature: {} for train/test set".format(col_name))
         train[col_name], test[col_name] = get_expanding_mean(train, test, [col], "is_attributed", 
-                           tr_filename=os.path.join(out_path, "train_{}.pkl".format(col_name)),  
-                           val_filename=os.path.join(out_path, "test_{}.pkl".format(col_name)), 
+                           tr_filename=os.path.join(out_path, "train_{}.npy".format(col_name)),  
+                           val_filename=os.path.join(out_path, "test_{}.npy".format(col_name)), 
                            seed=786, rewrite=rewrite)
-        train[col_name], test[col_name] = train[col_name].astype(np.float32), test[col_name].astype(np.float32)
+        train[col_name], test[col_name] = train[col_name].fillna(0), test[col_name].fillna(0)
         
         feats2.append(col_name)
+    return tr, val, train, test, feats2
+
+def load_timediff_features(tr, val, train, test, logger, out_path="../output/", rewrite=False):
+    feats2 = []
+    for col in ['ip', 'ip_device_os', 'ip_device_os_app']:
+        logger.info("Processing feature: {}".format(col))
+        
+        for SHIFT in [1,2]:
+            col_name = "_".join([col]) + "_prev_click_" + SHIFT
+            logger.info("Gnerating feature: {} for tr/val set".format(col_name))
+            
+            tr[col_name], val[col_name] = get_prev_click(tr, val, [col], shift=SHIFT, target= "is_attributed", 
+                            tr_filename=os.path.join(out_path, "tr_{}.npy".format(col_name)),  
+                            val_filename=os.path.join(out_path, "val_{}.npy".format(col_name)), 
+                            seed=786, rewrite=rewrite)
+            tr[col_name], val[col_name] = tr[col_name].astype(np.float32), val[col_name].astype(np.float32)
+
+            logger.info("Gnerating feature: {} for train/test set".format(col_name))
+            train[col_name], test[col_name] = get_prev_click(train, test, [col], shift=SHIFT, target= "is_attributed", 
+                            tr_filename=os.path.join(out_path, "train_{}.npy".format(col_name)),  
+                            val_filename=os.path.join(out_path, "test_{}.npy".format(col_name)), 
+                            seed=786, rewrite=rewrite)
+            train[col_name], test[col_name] = train[col_name].astype(np.float32), test[col_name].astype(np.float32)
+            
+            feats2.append(col_name)
+
+            col_name = "_".join([col]) + "_next_click_" + SHIFT
+            logger.info("Gnerating feature: {} for tr/val set".format(col_name))
+            
+            tr[col_name], val[col_name] = get_prev_click(tr, val, [col], shift=-SHIFT, target= "is_attributed", 
+                            tr_filename=os.path.join(out_path, "tr_{}.npy".format(col_name)),  
+                            val_filename=os.path.join(out_path, "val_{}.npy".format(col_name)), 
+                            seed=786, rewrite=rewrite)
+            tr[col_name], val[col_name] = tr[col_name].astype(np.float32), val[col_name].astype(np.float32)
+
+            logger.info("Gnerating feature: {} for train/test set".format(col_name))
+            train[col_name], test[col_name] = get_next_click(train, test, [col], shift=-SHIFT, target= "is_attributed", 
+                            tr_filename=os.path.join(out_path, "train_{}.npy".format(col_name)),  
+                            val_filename=os.path.join(out_path, "test_{}.npy".format(col_name)), 
+                            seed=786, rewrite=rewrite)
+            train[col_name], test[col_name] = train[col_name].astype(np.float32), test[col_name].astype(np.float32)
+            
+            feats2.append(col_name)         
     return tr, val, train, test, feats2
