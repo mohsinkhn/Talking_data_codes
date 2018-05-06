@@ -38,6 +38,24 @@ def load_if_saved(feature_generator):
     return wrapper
 
 
+def load_if_saved_numpy(feature_generator):
+    def wrapper(*args, **kwargs):
+        tr_filename = kwargs.get('tr_filename', None)
+        val_filename = kwargs.get('val_filename', None)
+        rewrite = kwargs.get('rewrite', False) 
+        if ((os.path.exists(tr_filename)) and (os.path.exists(val_filename)) and not(rewrite)):
+            tr_data = np.load(tr_filename)
+            val_data = np.load(val_filename)
+
+        else:
+            tr_data, val_data = feature_generator(*args, **kwargs)
+            np.save(tr_filename, tr_data )
+            np.save(val_filename, val_data)
+        return tr_data, val_data
+    return wrapper
+
+
+
 @load_if_saved
 def get_count_feature(tr, val, cols, target, tr_filename="../output/tr_tmp.pkl",  
                      val_filename="../output/val_tmp.pkl", seed=786, rewrite=False):
@@ -70,14 +88,14 @@ def get_unq_feature(tr, val, cols, target, tr_filename="../output/tr_tmp.pkl",
     col_name = "_".join(cols) + '_unq_' + target
     all_cols  = cols + [target]
     unq_cnt = TargetEncoder(cols=cols,  targetcol=target, func='nunique') 
-    
-    tr[col_name] = unq_cnt.fit_transform(tr[all_cols])
+    unq_cnt.fit(pd.concat([tr[all_cols], val[all_cols]]))
+    tr[col_name] = unq_cnt.transform(tr[all_cols])
     val[col_name] = unq_cnt.transform(val[all_cols])
     
     tr[col_name] = tr[col_name].fillna(0)
     val[col_name] = val[col_name].fillna(0)
     
-    return tr[col_name], val[col_name]
+    return tr[col_name].values.astype(np.int32), val[col_name].values.astype(np.int32)
 
 
 @load_if_saved
@@ -92,8 +110,22 @@ def get_expanding_mean(tr, val, cols, target, tr_filename="../output/tr_tmp.pkl"
     val[col_name] = exp_mean.transform(val[all_cols])
     val[col_name] = val[col_name].fillna(-1)
     
-    return tr[col_name], val[col_name]
+    return tr[col_name].values.astype(np.float32), val[col_name].values.astype(np.float32)
 
+
+@load_if_saved_numpy
+def get_expanding_count(tr, val, cols, target, tr_filename="../output/tr_tmp.pkl",  
+                     val_filename="../output/val_tmp.pkl", seed=786, rewrite=False):
+    col_name = "_".join(cols) + '_expcount'
+    all_cols  = cols + [target]
+    tr[col_name] = tr[all_cols].groupby(cols)[target].expanding(min_periods=1).count().shift().fillna(-1).reset_index(level=0, drop=True)
+    
+    exp_mean = TargetEncoder(cols=cols,  targetcol=target, func='count') 
+    exp_mean.fit(tr[all_cols])
+    val[col_name] = exp_mean.transform(val[all_cols])
+    val[col_name] = val[col_name].fillna(-1)
+    
+    return tr[col_name].values.astype(np.float32), val[col_name].values.astype(np.float32)
 
 def run_lgb(tr, val, params, logger, 
            feats=None, is_develop=True, 
@@ -131,7 +163,7 @@ def prepare_submission(preds, save_path = "../output/test_preds.csv"):
     sub.to_csv(save_path, index=False)
 
 
-def load_unq_features(tr, val, train, test, logger, out_path="../output/"):
+def load_unq_features(tr, val, train, test, logger, out_path="../output/", rewrite=False):
     feats2 = []
     for cols, target in zip([['ip'], ['ip'], ['app'], ['app'], ['ip'], ['channel'], ['ip_device_os', 'dayofweek'], ['ip', 'os'], ['ip_device_os']],
                             ['app', 'channel', 'ip', 'os', 'ip_device_os', 'app', 'hourofday', 'app', 'dayofweek']):
@@ -142,14 +174,15 @@ def load_unq_features(tr, val, train, test, logger, out_path="../output/"):
         tr[col_name], val[col_name] = get_unq_feature(tr, val, cols, target, 
                            tr_filename=os.path.join(out_path, "tr_{}.pkl".format(col_name)),  
                            val_filename=os.path.join(out_path, "val_{}.pkl".format(col_name)), 
-                           seed=786, rewrite=False)
-        
+                           seed=786, rewrite=rewrite)
+        tr[col_name], val[col_name] = tr[col_name].astype(np.int32), val[col_name].astype(np.int32)
+
         logger.info("Gnerating feature: {} for train/test set".format(col_name))
         train[col_name], test[col_name] = get_unq_feature(train, test, cols, target, 
                            tr_filename=os.path.join(out_path, "train_{}.pkl".format(col_name)),  
                            val_filename=os.path.join(out_path, "test_{}.pkl".format(col_name)), 
-                           seed=786, rewrite=False)
-
+                           seed=786, rewrite=rewrite)
+        train[col_name], test[col_name] = train[col_name].astype(np.int32), test[col_name].astype(np.int32)
         
         feats2.append(col_name)
     return tr, val, train, test, feats2
@@ -167,17 +200,19 @@ def load_count_features(tr, val, train, test, logger, out_path="../output/", see
                            tr_filename=os.path.join(out_path, "tr_{}_{}.pkl".format(col_name, seed)),  
                            val_filename=os.path.join(out_path, "val_{}_{}.pkl".format(col_name, seed)), 
                            seed=786, rewrite=False)
-        
+        tr[col_name], val[col_name] = tr[col_name].astype(np.int32), val[col_name].astype(np.int32)
+
         logger.info("Gnerating feature: {} for train/test set".format(col_name))
         train[col_name], test[col_name] = get_count_feature(train, test, [col], "is_attributed", 
                            tr_filename=os.path.join(out_path, "train_{}_{}.pkl".format(col_name, seed)),  
                            val_filename=os.path.join(out_path, "test_{}_{}.pkl".format(col_name, seed)), 
                            seed=786, rewrite=False)
         feats2.append(col_name)
+        train[col_name], test[col_name] = train[col_name].astype(np.int32), test[col_name].astype(np.int32)
     return tr, val, train, test, feats2
 
 
-def load_expmean_features(tr, val, train, test, logger, out_path="../output/"):
+def load_expmean_features(tr, val, train, test, logger, out_path="../output/", rewrite=False):
     feats2 = []
     for col in ['app', 'channel', 'os', 'device', 'ip', 'ip_device_os']:
         logger.info("Processing feature: {}".format(col))
@@ -188,14 +223,15 @@ def load_expmean_features(tr, val, train, test, logger, out_path="../output/"):
         tr[col_name], val[col_name] = get_expanding_mean(tr, val, [col], "is_attributed", 
                            tr_filename=os.path.join(out_path, "tr_{}.pkl".format(col_name)),  
                            val_filename=os.path.join(out_path, "val_{}.pkl".format(col_name)), 
-                           seed=786, rewrite=False)
-        
+                           seed=786, rewrite=rewrite)
+        tr[col_name], val[col_name] = tr[col_name].astype(np.float32), val[col_name].astype(np.float32)
+
         logger.info("Gnerating feature: {} for train/test set".format(col_name))
         train[col_name], test[col_name] = get_expanding_mean(train, test, [col], "is_attributed", 
                            tr_filename=os.path.join(out_path, "train_{}.pkl".format(col_name)),  
                            val_filename=os.path.join(out_path, "test_{}.pkl".format(col_name)), 
-                           seed=786, rewrite=False)
-
+                           seed=786, rewrite=rewrite)
+        train[col_name], test[col_name] = train[col_name].astype(np.float32), test[col_name].astype(np.float32)
         
         feats2.append(col_name)
     return tr, val, train, test, feats2
