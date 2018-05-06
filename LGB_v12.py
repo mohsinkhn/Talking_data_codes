@@ -147,8 +147,8 @@ if __name__ == "__main__":
              "n_jobs"           :-1
               }
     
-    extra_feats = ['hourofday' ,'app_expmean', 'channel_expmean', 'os_expmean',
-       'device_expmean', 'ip_expmean', 'ip_device_os_expmean',
+    extra_feats = ['hourofday' ,'app_expmean', 'channel_expmean', 
+        'ip_expmean',
        'ip_prev_click_1', 'ip_next_click_1',  'ip_device_os_prev_click_1',
        'ip_device_os_next_click_1', 'ip_device_os_app_prev_click_1', 'ip_device_os_app_prev_click_2',
        'ip_device_os_app_next_click_1', 'ip_device_os_app_next_click_2', 'app_count', 'channel_count',
