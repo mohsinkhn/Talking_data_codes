@@ -68,6 +68,25 @@ if __name__ == "__main__":
     train = time_details(train)
     test = time_details(test)
     
+    logger.info("Read extra features")
+    trainf2 = pd.read_feather("../output/train_feats123.feather")
+    testf2 = pd.read_feather("../output/test_feats123.feather")
+
+    feats_extra = ['ip_cnt', 'ip_app_cnt', 'app_cnt', 'app_channel_cnt',
+       'device_os_cnt', 'ip_app_hourofday_cnt', 'device_os_app_cnt',
+       'device_os_channel_cnt', 'ip_device_os_cnt',
+       'ip_device_os_hourofday_cnt', 'ip_device_os_app_cnt',
+       'ip_device_os_app_channel_cnt', 'ip_timecount', 'ip_timediff',
+       'ip_device_os_timecount', 'ip_device_os_timediff',
+       'ip_device_os_app_timecount', 'ip_device_os_app_timediff',
+       'ip_device_os_app_channel_timecount',
+       'ip_device_os_app_channel_timediff']
+
+    logger.info("Read extra features")
+    train = pd.concat([train, trainf2[feats_extra]], axis=1)
+    test = pd.concat([test, testf2[feats_extra]], axis=1)   
+
+    del trainf2, testf2
     logger.info("Break train into tr and val")
     cond = (train.dayofweek == 3) & (train.hourofday.isin([4,5,9,10,13,14]))
     cond2 = ((train.dayofweek == 3) & (train.hourofday < 4)) | (train.dayofweek < 3)
@@ -88,7 +107,7 @@ if __name__ == "__main__":
     tr, val, train, test, feats_unq = load_unq_features(tr, val, train, test, logger)
     
     feats = base_feats + feats_count + feats_expmean + feats_unq
-    #feats.remove(['ip_expmean'])
+        
     logger.info("Running LGB for develop set with feats {}".format(feats))
     model, val_preds = run_lgb(tr, val, LGB_PARAMS, logger, feats=feats, is_develop=True, save_preds=False)
     score = roc_auc_score(y_val, val_preds)
