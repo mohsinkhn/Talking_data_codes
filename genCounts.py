@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 # create a file handler
-handler = logging.FileHandler('genCumCount.log')
+handler = logging.FileHandler('genCounts.log')
 handler.setLevel(logging.INFO)
 
 # create a logging format
@@ -50,7 +50,7 @@ if __name__ == "__main__":
     train = pd.read_csv("../input/train_base.csv", dtype=DTYPES, 
                        )
     test = pd.read_csv("../input/test_base.csv", dtype=DTYPES)
-    test["is_attributed"] = np.nan
+    test["is_attributed"] = 0
     
     logger.info("Get time details")
     train = time_details(train)
