@@ -79,13 +79,13 @@ if __name__ == "__main__":
         get_count_feature(tr, val, [col], "is_attributed", 
                            tr_filename=os.path.join(OUT_PATH, "tr_{}.npy".format(col_name)),  
                            val_filename=os.path.join(OUT_PATH, "val_{}.npy".format(col_name)), 
-                           seed=786, rewrite=False)
+                           seed=786, rewrite=True)
         
         logger.info("Gnerating feature: {} for train/test set".format(col_name))
         get_count_feature(train, test, [col], "is_attributed", 
                            tr_filename=os.path.join(OUT_PATH, "train_{}.npy".format(col_name)),  
                            val_filename=os.path.join(OUT_PATH, "test_{}.npy".format(col_name)), 
-                           seed=786, rewrite=False)
+                           seed=786, rewrite=True)
 
         
         feats2.append(col_name)

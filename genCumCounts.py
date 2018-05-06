@@ -50,7 +50,7 @@ if __name__ == "__main__":
     train = pd.read_csv("../input/train_base.csv", dtype=DTYPES, 
                        )
     test = pd.read_csv("../input/test_base.csv", dtype=DTYPES)
-    test["is_attributed"] = np.nan
+    test["is_attributed"] = 0
     
     logger.info("Get time details")
     train = time_details(train)
@@ -79,13 +79,13 @@ if __name__ == "__main__":
         get_expanding_count(tr, val, [col], "is_attributed", 
                            tr_filename=os.path.join(OUT_PATH, "tr_{}.npy".format(col_name)),  
                            val_filename=os.path.join(OUT_PATH, "val_{}.npy".format(col_name)), 
-                           seed=786, rewrite=False)
+                           seed=786, rewrite=True)
         
         logger.info("Gnerating feature: {} for train/test set".format(col_name))
         get_expanding_count(train, test, [col], "is_attributed", 
                            tr_filename=os.path.join(OUT_PATH, "train_{}.npy".format(col_name)),  
                            val_filename=os.path.join(OUT_PATH, "test_{}.npy".format(col_name)), 
-                           seed=786, rewrite=False)
+                           seed=786, rewrite=True)
 
         
         feats2.append(col_name)
