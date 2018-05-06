@@ -1,5 +1,5 @@
 import pandas as pd
-import numpy as np                      
+import numpy as np
 from sklearn.base import BaseEstimator, TransformerMixin
 class TargetEncoder(BaseEstimator, TransformerMixin):
     """
@@ -19,7 +19,7 @@ class TargetEncoder(BaseEstimator, TransformerMixin):
     pandas DataFrame/Series
     
     """
-    def __init__(self, cols=None, targetcol=None, cname=None, thresh=0, func=np.mean,  add_to_orig=False,                              func_kwargs={}):
+    def __init__(self, cols=None, targetcol=None, cname=None, thresh=0, func=np.mean,  add_to_orig=False, func_kwargs={}):                                                 
         self.cols = cols #Can be either a string or list of strings with column names
         self.targetcol = targetcol #Target column to encode column/group of columns with
         self.thresh = thresh  #Minimum count of grouping to encode (Acts as smoothing)
@@ -30,11 +30,11 @@ class TargetEncoder(BaseEstimator, TransformerMixin):
     
     #@numba.jit        
     def fit(self, X, y=None):
-        all_cols = self.cols + [self.targetcol]
+            
         if isinstance(self.func, str):
             if hasattr(pd.Series, self.func):
                 #print("here")
-                vals = getattr(X[all_cols].groupby(self.cols)[self.targetcol], self.func)
+                vals = getattr(X.groupby(self.cols)[self.targetcol], self.func)
                 self.dictmap = vals(**self.func_kwargs)
                 
         else:
@@ -65,4 +65,5 @@ class TargetEncoder(BaseEstimator, TransformerMixin):
                 return X_transformed.values
 
         else:
+>>>>>>> 92aa9baac489108b178f6f6460e9f47501e50b8b
             raise TypeError("Input should be a pandas DataFrame")
