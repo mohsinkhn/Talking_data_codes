@@ -51,6 +51,9 @@ if __name__ == "__main__":
                        )
     test = pd.read_csv("../input/test_base.csv", dtype=DTYPES)
     test["is_attributed"] = 0
+
+    test_supp = pd.read_csv("../input/test_supplement_base.csv", dtype=DTYPES)
+    test_supp["is_attributed"] = 0
     
     logger.info("Get time details")
     train = time_details(train)
@@ -68,7 +71,7 @@ if __name__ == "__main__":
     logger.info("Shape of tr and val is {} and {}".format(tr.shape, val.shape))
     
     
-    logger.info("Generate cumulative count features")
+    logger.info("Generate total count features")
     feats2 = []
     for col in ['app', 'channel', 'ip', 'os', 'ip_device_os', 'ip_device_os_app', 'ip_device_os_app_channel']:
         logger.info("Processing feature: {}".format(col))
@@ -76,13 +79,13 @@ if __name__ == "__main__":
         col_name = "_".join([col]) + "_count"
         logger.info("Gnerating feature: {} for tr/val set".format(col_name))
         
-        get_count_feature(tr, val, [col], "is_attributed", 
+        get_count_feature(tr, val, [col], "is_attributed", use_supp=False, test_supp=test_supp,
                            tr_filename=os.path.join(OUT_PATH, "tr_{}.npy".format(col_name)),  
                            val_filename=os.path.join(OUT_PATH, "val_{}.npy".format(col_name)), 
                            seed=786, rewrite=True)
         
         logger.info("Gnerating feature: {} for train/test set".format(col_name))
-        get_count_feature(train, test, [col], "is_attributed", 
+        get_count_feature(train, test, [col], "is_attributed", use_supp=True, test_supp=test_supp,
                            tr_filename=os.path.join(OUT_PATH, "train_{}.npy".format(col_name)),  
                            val_filename=os.path.join(OUT_PATH, "test_{}.npy".format(col_name)), 
                            seed=786, rewrite=True)
