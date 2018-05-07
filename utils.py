@@ -57,12 +57,15 @@ def load_if_saved_numpy(feature_generator):
 
 
 @load_if_saved_numpy
-def get_count_feature(tr, val, cols, target, tr_filename="../output/tr_tmp.npy",  
+def get_count_feature(tr, val, cols, target, use_supp=False, test_supp=None, tr_filename="../output/tr_tmp.npy",  
                      val_filename="../output/val_tmp.npy", seed=786, rewrite=False):
     all_cols = cols + [target]
     
     mean_enc = TargetEncoder(cols=cols,  targetcol=target, func='count')
-    mean_enc.fit(pd.concat([tr[all_cols], val[all_cols]]).reset_index(drop=False))
+    if use_supp:
+        mean_enc.fit(pd.concat([tr[all_cols], test_supp[all_cols]]).reset_index(drop=False))
+    else:
+        mean_enc.fit(pd.concat([tr[all_cols], val[all_cols]]).reset_index(drop=False))
     tr_data = mean_enc.transform(tr[all_cols])
     val_data = mean_enc.transform(val[all_cols])
     
