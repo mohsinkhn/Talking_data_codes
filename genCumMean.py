@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 # create a file handler
-handler = logging.FileHandler('genCounts.log')
+handler = logging.FileHandler('genCumMean.log')
 handler.setLevel(logging.INFO)
 
 # create a logging format
@@ -70,19 +70,19 @@ if __name__ == "__main__":
     
     logger.info("Generate cumulative count features")
     feats2 = []
-    for col in ['app', 'channel', 'ip', 'os', 'ip_device_os', 'ip_device_os_app', 'ip_device_os_app_channel']:
+    for col in ['app', 'channel', 'ip']:
         logger.info("Processing feature: {}".format(col))
         
-        col_name = "_".join([col]) + "_count"
+        col_name = "_".join([col]) + "_expmean"
         logger.info("Gnerating feature: {} for tr/val set".format(col_name))
         
-        get_count_feature(tr, val, [col], "is_attributed", 
+        get_expanding_mean(tr, val, [col], "is_attributed", 
                            tr_filename=os.path.join(OUT_PATH, "tr_{}.npy".format(col_name)),  
                            val_filename=os.path.join(OUT_PATH, "val_{}.npy".format(col_name)), 
                            seed=786, rewrite=True)
         
         logger.info("Gnerating feature: {} for train/test set".format(col_name))
-        get_count_feature(train, test, [col], "is_attributed", 
+        get_expanding_mean(train, test, [col], "is_attributed", 
                            tr_filename=os.path.join(OUT_PATH, "train_{}.npy".format(col_name)),  
                            val_filename=os.path.join(OUT_PATH, "test_{}.npy".format(col_name)), 
                            seed=786, rewrite=True)
